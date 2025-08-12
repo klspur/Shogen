@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>生日快樂｜兌換券</title>
+    <meta name="description" content="簡潔風格的生日祝福頁面，含可由發券者核銷的兌換券狀態。" />
+    <style>
+        :root {
+            --mint: #BFF1DD;
+            /* 薄荷綠（輔助色） */
+            --mint-deep: #7BD4B2;
+            /* 深一階薄荷 */
+            --ink: #1F2937;
+            /* 深灰文字 */
+            --paper: #ffffff;
+            /* 白（底色） */
+            --line: #E5F5EE;
+            /* 淺綠邊線 */
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans TC", "PingFang TC", "Heiti TC", sans-serif;
+            color: var(--ink);
+            background: var(--paper);
+        }
+
+        .wrap {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .04);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            letter-spacing: .5px;
+        }
+
+        .subtitle {
+            margin: 0 0 20px;
+            color: #4B5563
+        }
+
+        .coupon {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-weight: 600;
+        }
+
+        .badge.open {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0
+        }
+
+        .badge.closed {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA
+        }
+
+        .muted {
+            color: #6B7280;
+            font-size: 14px
+        }
+
+        .title {
+            font-weight: 700;
+            font-size: 22px
+        }
+
+        .btn {
+            cursor: pointer;
+            border: 1px solid transparent;
+            background: var(--mint-deep);
+            color: #064E3B;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed
+        }
+
+        .btn.secondary {
+            background: #F3FFF9;
+            border-color: #CFF4E3;
+            color: #065F46
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border-color: #CDEFE2;
+            color: #065F46
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: 8px;
+        }
+
+        .kv div {
+            padding: 6px 0;
+            border-bottom: 1px dashed #E5E7EB
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6B7280
+        }
+
+        .hr {
+            height: 1px;
+            background: #E5E7EB;
+            margin: 16px 0
+        }
+
+        dialog {
+            border: none;
+            border-radius: 16px;
+            padding: 0;
+            width: min(460px, 92vw);
+        }
+
+        dialog .sheet {
+            padding: 20px
+        }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, .25)
+        }
+
+        input,
+        .input {
+            width: 100%;
+            border: 1px solid #D1FAE5;
+            background: #F8FFFC;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 16px;
+            color: #064E3B
+        }
+
+        code {
+            background: #F1F5F9;
+            padding: 2px 6px;
+            border-radius: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>生日快樂，<span id="name"></span>！</h1>
+            <p class="subtitle" id="customMsg"></p>
+
+            <div class="coupon">
+                <div class="row">
+                    <div class="title">🍽️ 兌換券</div>
+                    <div id="statusBadge" class="badge open">未兌換</div>
+                </div>
+                <div class="kv">
+                    <div class="muted">收件人</div>
+                    <div id="kvRecipient"></div>
+                    <div class="muted">內容</div>
+                    <div>一起吃一頓喜歡的餐點（我請客）</div>
+                    <div class="muted">有效期限</div>
+                    <div id="kvExpiry"></div>
+                    <div class="muted">券編號</div>
+                    <div id="kvId"></div>
+                    <div class="muted">狀態</div>
+                    <div id="kvState">未兌換</div>
+                    <div class="muted">核銷時間</div>
+                    <div id="kvRedeemedAt">—</div>
+                </div>
+                <div class="row">
+                    <button id="btnHow" class="btn secondary">使用說明</button>
+                    <div class="row" style="gap:8px">
+                        <button id="btnAdmin" class="btn">核銷（管理員）</button>
+                        <button id="btnCopy" class="btn ghost" title="複製連結">複製連結</button>
+                    </div>
+                </div>
+                <p class="hint">提示：受贈人只需保存此連結。核銷僅能由發券者在現場完成。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用說明 -->
+    <dialog id="dlgHow">
+        <div class="sheet">
+            <h3 style="margin:0 0 10px">如何使用</h3>
+            <ol style="margin:0 0 12px 18px; line-height:1.7">
+                <li>把本頁連結傳給壽星保存。</li>
+                <li>哪天要用券，到現場後由你點「核銷（管理員）」→ 輸入管理 PIN。</li>
+                <li>成功核銷後，頁面會顯示「已兌換」和時間戳記。</li>
+            </ol>
+            <div class="row" style="justify-content:flex-end; margin-top:8px">
+                <button class="btn" id="closeHow">關閉</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- 管理員核銷 -->
+    <dialog id="dlgAdmin">
+        <div class="sheet">
+            <h3 style="margin:0 0 4px">核銷（管理員）</h3>
+            <p class="muted" style="margin:0 0 12px">輸入 6 位數管理 PIN 以標記本券為「已兌換」。</p>
+            <input id="pinInput" inputmode="numeric" maxlength="6" placeholder="例如：123456" />
+            <label style="display:flex; align-items:center; gap:8px; margin:12px 0 0">
+                <input type="checkbox" id="cbConfirm" /> 我確認今天與持券人已完成用餐。
+            </label>
+            <div class="hr"></div>
+            <div class="row" style="justify-content:flex-end">
+                <button class="btn ghost" id="btnCancel">取消</button>
+                <button class="btn" id="btnRedeem">核銷</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        // —— 基本設定（你可以在這裡改名字或期限） ——
+        const CONFIG = {
+            recipientName: '楊心妮', // 受贈人姓名
+            expiry: '2026-08-14',    // 有效期限（YYYY-MM-DD）
+            couponId: 'coupon-0814', // 券編號
+            adminPIN: '900814',      // ✅ 核銷 PIN（你指定的數字）
+            customMessage: '老姐，生日快樂！想吃飯就約我，這裡有一張 「請你吃飯」 的兌換券，下次見面再請你吃飯。順便帶我女朋友跟你認識認識啦哈哈哈！'
+        };
+
+        // —— DOM 綁定 ——
+        const $ = (s) => document.querySelector(s);
+        const nameEl = $('#name');
+        const msgEl = $('#customMsg');
+        const kvRecipient = $('#kvRecipient');
+        const kvExpiry = $('#kvExpiry');
+        const kvId = $('#kvId');
+        const kvState = $('#kvState');
+        const kvRedeemedAt = $('#kvRedeemedAt');
+        const statusBadge = $('#statusBadge');
+
+        const dlgAdmin = $('#dlgAdmin');
+        const pinInput = $('#pinInput');
+        const btnRedeem = $('#btnRedeem');
+        const cbConfirm = $('#cbConfirm');
+
+        const dlgHow = $('#dlgHow');
+
+        // —— 資料層（僅本機儲存） ——
+        const STORAGE_KEY = `meal-coupon::${CONFIG.couponId}`;
+        /** @type {{state:'open'|'redeemed', redeemedAt?:string, couponId:string}} */
+        let coupon = { state: 'open', couponId: CONFIG.couponId };
+
+        function init() {
+            // 基本文案
+            nameEl.textContent = CONFIG.recipientName;
+            msgEl.textContent = CONFIG.customMessage;
+            kvRecipient.textContent = CONFIG.recipientName;
+            kvExpiry.textContent = fmtDate(CONFIG.expiry);
+            kvId.textContent = CONFIG.couponId;
+
+            // 讀取本機狀態
+            const local = readLocal();
+            if (local) { coupon = local; }
+            render();
+        }
+
+        function readLocal() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null }
+        }
+        function writeLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+        function render() {
+            const redeemed = coupon.state === 'redeemed';
+            kvState.textContent = redeemed ? '已兌換' : '未兌換';
+            statusBadge.textContent = redeemed ? '已兌換' : '未兌換';
+            statusBadge.className = `badge ${redeemed ? 'closed' : 'open'}`;
+            kvRedeemedAt.textContent = redeemed ? fmtDateTime(coupon.redeemedAt) : '—';
+            btnRedeem.disabled = redeemed;
+        }
+
+        function redeem() {
+            coupon.state = 'redeemed';
+            coupon.redeemedAt = new Date().toISOString();
+            writeLocal(coupon);
+            render();
+        }
+
+        // —— 工具 ——
+        function fmtDate(s) {
+            const d = new Date(s);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${y}/${m}/${dd}`;
+        }
+        function fmtDateTime(s) {
+            if (!s) return '—';
+            const d = new Date(s);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${y}/${m}/${dd} ${hh}:${mm}`;
+        }
+
+        // —— 事件 ——
+        $('#btnAdmin').addEventListener('click', () => {
+            if (coupon.state === 'redeemed') return alert('此券已被核銷。');
+            pinInput.value = '';
+            cbConfirm.checked = false;
+            dlgAdmin.showModal();
+            setTimeout(() => pinInput.focus(), 50);
+        });
+        $('#btnCancel').addEventListener('click', () => dlgAdmin.close());
+
+        btnRedeem.addEventListener('click', () => {
+            const pin = pinInput.value.trim();
+            if (pin.length !== 6) return alert('請輸入 6 位數 PIN');
+            if (pin !== CONFIG.adminPIN) return alert('PIN 不正確');
+            if (!cbConfirm.checked) return alert('請勾選確認用餐');
+            redeem();
+            dlgAdmin.close();
+            alert('已核銷！祝用餐愉快！');
+        });
+
+        $('#btnHow').addEventListener('click', () => dlgHow.showModal());
+        $('#closeHow').addEventListener('click', () => dlgHow.close());
+
+        $('#btnCopy').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(location.href);
+                alert('已複製連結');
+            } catch { alert('複製失敗，請手動複製網址列'); }
+        });
+
+        // 啟動
+        init();
+    </script>
+</body>
+
+</html>
